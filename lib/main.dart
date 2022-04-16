@@ -1,14 +1,19 @@
-import 'package:english_words/english_words.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import './login.dart';
-import 'package:flutter/foundation.dart';
+import 'package:english_words/english_words.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
+import 'SavedSuggestion.dart';
+import 'login.dart';
+import 'login_screen.dart';
+import 'package:hello_me/WordPairUtils.dart';
 
-void main() {
+
+
+
+Future<void> main() async { // Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   runApp(App());
-
 }
 
 
@@ -17,219 +22,134 @@ class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
-        future: _initialization,
-        builder: (context, snapshot) {
-      if (snapshot.hasError) {
-        return Scaffold(
-            body: Center(
-                child: Text(snapshot.error.toString(),
-                    textDirection: TextDirection.ltr)));
-      }
-      if (snapshot.connectionState == ConnectionState.done) {
-        return  ChangeNotifierProvider(
-          create:(context)=> AuthRepository.instance(),
-          child:     MyApp(),);
-
-
-
-      }
-      return Center(child: CircularProgressIndicator());
-        },
+      future: _initialization,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return MaterialApp(
+              home: Scaffold(
+                  body: Center(
+                      child: Text(snapshot.error.toString(),
+                          textDirection: TextDirection.ltr)
+                  )
+              )
+          );
+        }
+        if (snapshot.connectionState == ConnectionState.done) {
+          return MultiProvider(
+            providers: [
+              ChangeNotifierProvider(create: (context) => AuthRepository.instance()),
+              ChangeNotifierProxyProvider<AuthRepository, RandomWordsNotifier>(
+                create: (context) => RandomWordsNotifier(),
+                update: (context, auth, notifier) => notifier!.update(auth),
+              ),
+            ],
+            child: MyApp(),
+          );
+        }
+        return Center(child: CircularProgressIndicator());
+      },
     );
   }
 }
 
-// #docregion MyApp
+
 class MyApp extends StatelessWidget {
   const MyApp({Key? key}) : super(key: key);
-
-  // #docregion build
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Startup Name Generator',
+      title: 'Startup Name Generator 2.0',
       theme: ThemeData(
         appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
+          backgroundColor: Colors.deepPurple,
+          foregroundColor: Colors.white,
         ),
       ),
       home: const RandomWords(),
     );
   }
-// #enddocregion build
 }
-// #enddocregion MyApp
 
-// #docregion RWS-var
-class _RandomWordsState extends State<RandomWords> {
-  final _suggestions = <WordPair>[];
-  final _saved = <WordPair>{};
-  final _biggerFont = const TextStyle(fontSize: 18.0);
 
-  // #enddocregion RWS-var
 
-  // #docregion RWS-build
+
+
+
+class RandomWords extends StatelessWidget {
+  const RandomWords({Key? key}) : super(key: key);
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Startup Name Generator'),
-        backgroundColor: Colors.deepPurple,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.list),
-            onPressed: _pushSaved,
-            tooltip: 'Saved Suggestions',
+    return Consumer2<AuthRepository,RandomWordsNotifier>(
+      builder: (context, authRep, randomWords, child) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Startup Name Generator'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.star),
+                onPressed: () {
+                  _pushSaved(context);
+                },
+                tooltip: 'Saved Suggestions',
+              ),
+              IconButton(
+                icon: authRep.isAuthenticated
+                    ? const Icon(Icons.exit_to_app)
+                    : const Icon(Icons.login),
+                onPressed: () {
+                  authRep.isAuthenticated
+                      ? _pushLogout(context, authRep)
+                      : _pushLogin(context);
+                },
+                tooltip: authRep.isAuthenticated ? 'Log out button' : 'Log in button',
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.login),
-            onPressed: _pushLogin,
-            tooltip: 'login button',
-          ),
-        ],
-      ),
-      // #docregion itemBuilder
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemBuilder: /*1*/ (context, i) {
-          if (i.isOdd) return const Divider();
-
-          final index = i ~/ 2;
-          if (index >= _suggestions.length) {
-            _suggestions.addAll(generateWordPairs().take(10));
-          }
-
-          final alreadySaved = _saved.contains(_suggestions[index]);
-
-          return ListTile(
-            title: Text(
-              _suggestions[index].asPascalCase,
-              style: _biggerFont,
-            ),
-            trailing: Icon(
-              alreadySaved ? Icons.star : Icons.star_border,
-              color: alreadySaved ? Colors.deepPurple : null,
-              semanticLabel: alreadySaved ? 'Remove from saved' : 'Save',
-            ),
-            onTap: () {
-              setState(() {
-                if (alreadySaved) {
-                  _saved.remove(_suggestions[index]);
-                } else {
-                  _saved.add(_suggestions[index]);
-                }
-              });
-            },
-          );
-        },
-      ),
+          body: randomWords.buildSuggestions(),
+        );
+      },
     );
   }
 
-  void _pushLogin() {
-    Navigator.of(context).push(MaterialPageRoute<void>(builder: (context) {
-      return Scaffold(
-          appBar: AppBar(
-            title: const Text('Login'),
-            backgroundColor: Colors.deepPurple,
-            foregroundColor: Colors.white,
-          ),
-          body: Padding(
-            padding: const EdgeInsets.all(50),
-            child: Column(children: [
-              const Text(
-                  "Welcome to Startup Names Generator, please log in below"),
-              const TextField(
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                ),
-              ),
-              const TextField(
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                ),
-              ),
-              const SizedBox(height: 10),
-              SizedBox(
-                  width: double.infinity,
-
-
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                        primary: Colors.deepPurple,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0),)
-                    ),
-                      child: const Text('Log In'),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Login is not implemented yet")));
-                      },
-                    ),
-                  ),
-            ]),
-          ));
-    }));
-  }
-
-  void _pushSaved() {
+  void _pushLogin(BuildContext context) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (context) {
-          final tiles = _saved.map(
-            (pair) {
-              return Dismissible(
-                child: ListTile(
-                  title: Text(
-                    pair.asPascalCase,
-                    style: _biggerFont,
-                  ),
-                ),
+          return UserLogin();
+        },
+      ),
+    );
+  }
 
-                background: Container(
-                  color: Colors.deepPurple,
-                  child: Row(
-                    children: const [
-                      Icon(Icons.delete, color: Colors.white,),
-                      Text("Delete Suggestion", style: TextStyle(color: Colors.white)),
-                    ],
-                  ),
-                ),
-                key: ValueKey<int>(_saved.toList().indexOf(pair)),
-                confirmDismiss: (DismissDirection direction) async {
+  void _pushLogout(BuildContext context, AuthRepository authentication) async {
+    await authentication.signOut();
 
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Deletion is not implemented yet"))
-                    );
-                    return false;
-                },
-              );
-            },
-          );
-          final divided = tiles.isNotEmpty
-              ? ListTile.divideTiles(
-                  context: context,
-                  tiles: tiles,
-                ).toList()
-              : <Widget>[];
+  }
 
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('Saved Suggestions'),
-              backgroundColor: Colors.deepPurple,
-              foregroundColor: Colors.white,
-            ),
-            body: ListView(children: divided),
-          );
+  void _pushSaved(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) {
+          return  SavedSuggestion();
         },
       ),
     );
   }
 }
 
-class RandomWords extends StatefulWidget {
-  const RandomWords({Key? key}) : super(key: key);
 
-  @override
-  State<RandomWords> createState() => _RandomWordsState();
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

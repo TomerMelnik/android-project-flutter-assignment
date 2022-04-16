@@ -6,11 +6,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import './WordPairUtils.dart';
 
 
 enum Status { Uninitialized, Authenticated, Authenticating, Unauthenticated }
 
 FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
 
 class AuthRepository with ChangeNotifier {
   FirebaseAuth _auth;
@@ -56,7 +58,7 @@ class AuthRepository with ChangeNotifier {
     }
   }
 
-  Future signOut() async {
+  Future<void> signOut() async {
     _auth.signOut();
     _status = Status.Unauthenticated;
     notifyListeners();
@@ -75,15 +77,6 @@ class AuthRepository with ChangeNotifier {
   }
 
 
-  Future<void> updateUserFavourites(Set<WordPair> newFavourites){
-    // if (_status != Status.Authenticated) {
-    //   return Future<void>.delayed(const Duration(seconds: 0));
-    // }
-      return _firestore
-          .collection('users')
-          .doc(_user?.uid)
-          .update({"favourites":newFavourites.map((x)=>{jsonEncode(x)}).toList()});
-    }
 
 
   Future<DocumentSnapshot> getUser(){
