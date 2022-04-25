@@ -79,15 +79,6 @@ class AuthRepository with ChangeNotifier {
 
 
 
-  Future<DocumentSnapshot> getUser(){
-    // if (!(_user != null && _status == Status.Authenticated)) {
-    //   return Future<DocumentSnapshot>.delayed(const Duration(seconds: 0));
-    // }
-    return _firestore
-        .collection('users')
-        .doc(_user?.uid)
-        .get();
-  }
 
 }
 

@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:english_words/english_words.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:hello_me/MainSnap.dart';
 import 'package:provider/provider.dart';
 import 'SavedSuggestion.dart';
 import 'login.dart';
@@ -81,7 +82,8 @@ class RandomWords extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer2<AuthRepository,RandomWordsNotifier>(
       builder: (context, authRep, randomWords, child) {
-        return Scaffold(
+        return
+            Scaffold(
           appBar: AppBar(
             title: const Text('Startup Name Generator'),
             actions: [
@@ -105,8 +107,10 @@ class RandomWords extends StatelessWidget {
               ),
             ],
           ),
-          body: randomWords.buildSuggestions(),
-        );
+          body: authRep.isAuthenticated ? MainSnapSheet() : randomWords.buildSuggestions(),
+        )
+        //authRep.isAuthenticated ? MainSnap() : const SizedBox.shrink()
+            ;
       },
     );
   }

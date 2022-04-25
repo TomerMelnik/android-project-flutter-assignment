@@ -6,6 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'SignupUI.dart';
 
 import 'package:flutter/cupertino.dart';
 import 'package:provider/provider.dart';
@@ -18,6 +19,9 @@ class UserLogin extends StatelessWidget{
   UserLogin({Key? key}) : super(key: key);
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+
+
+  get pass => passwordController.text;
 
   void dispose() {
     emailController.dispose();
@@ -51,6 +55,7 @@ class UserLogin extends StatelessWidget{
                 decoration: const InputDecoration(
                     labelText: 'Password'
                 ),
+                obscureText: true,
                 controller: passwordController,
               ),
               Consumer<AuthRepository>(
@@ -80,6 +85,7 @@ class UserLogin extends StatelessWidget{
                   );
                 },
               ),
+              SignUpButton(userEmailController:emailController, userPasswordController:passwordController).build(context)
             ],
           )
       ),

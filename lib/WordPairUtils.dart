@@ -30,13 +30,13 @@ class RandomWordsNotifier extends ChangeNotifier {
     }
   }
 
-  void _getFavourites(AuthRepository authRepo) async {
-    if (authRepo.isAuthenticated) {
-      var cloudDoc = await getDocument(authRepo.user!.uid);
+  void _getFavourites(AuthRepository authRep) async {
+    if (authRep.isAuthenticated) {
+      var cloudDoc = await getDocument(authRep.user!.uid);
       if (cloudDoc == null) {
-        _firestore.collection("users").doc(authRepo.user!.uid).set({"favourites": []});
+        _firestore.collection("hw3").doc("data").collection("users").doc(authRep.user!.uid).set({"favourites": []});
       } else {
-        var action =  _firestore.collection("users").doc(authRepo.user!.uid).get().then((value) {
+        var action =  _firestore.collection("users").doc(authRep.user!.uid).get().then((value) {
           var wordsSet = {...List<String>.from(value.data()==null?{}:value.data()!["favourites"])};
           var parsedWords = wordsSet.map((e) => WordPair(e.split(RegExp(r"(?<=[a-z])(?=[A-Z])"))[0].toLowerCase(),e.split(RegExp(r"(?<=[a-z])(?=[A-Z])"))[1].toLowerCase()));
           _saved.addAll(parsedWords);
@@ -50,10 +50,10 @@ class RandomWordsNotifier extends ChangeNotifier {
     if (_authRep!.isAuthenticated) {
       if (remove == null) {
         var newList = _saved.map((e) => e.asPascalCase).toList();
-        _firestore.collection("users").doc(_authRep!.user!.uid).update({"favourites":FieldValue.arrayUnion(newList)}).then((value) {});
+        _firestore.collection("hw3").doc("data").collection("users").doc(_authRep!.user!.uid).update({"favourites":FieldValue.arrayUnion(newList)}).then((value) {});
         return;
         }
-       _firestore.collection("users").doc(_authRep!.user!.uid).update({"favourites":FieldValue.arrayRemove([remove.asPascalCase])}).then((value) {});
+       _firestore.collection("hw3").doc("data").collection("users").doc(_authRep!.user!.uid).update({"favourites":FieldValue.arrayRemove([remove.asPascalCase])}).then((value) {});
       }
     }
 
